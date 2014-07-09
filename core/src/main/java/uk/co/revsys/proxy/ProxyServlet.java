@@ -10,7 +10,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import org.apache.commons.io.IOUtils;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
@@ -22,14 +21,26 @@ import uk.co.revsys.utils.http.HttpResponse;
 
 public class ProxyServlet extends HttpServlet {
 
-    private Map<String, String> proxies;
+    private ProxyMap proxies;
     private HttpClient httpClient;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         WebApplicationContext webApplicationContext = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
-        this.proxies = (Map<String, String>) webApplicationContext.getBean("proxyMappings");
+        proxies = new ProxyMap();
+        Map<String, ProxyMap> proxyMaps = webApplicationContext.getBeansOfType(ProxyMap.class);
+        Map<String, ProxyMapFactoryBean> proxyMapFactories = webApplicationContext.getBeansOfType(ProxyMapFactoryBean.class);
+        for(Entry<String, ProxyMapFactoryBean> entry: proxyMapFactories.entrySet()){
+            try {
+                proxyMaps.put(entry.getKey(), entry.getValue().getObject());
+            } catch (Exception ex) {
+                throw new ServletException("Could not load proxy maps", ex);
+            }
+        }
+        for(ProxyMap proxyMap: proxyMaps.values()){
+            proxies.putAll(proxyMap);
+        }
         httpClient = new HttpClientImpl();
     }
 
@@ -47,16 +58,24 @@ public class ProxyServlet extends HttpServlet {
         processHttpResponse(response, resp);
     }
 
-    private HttpRequest getHttpRequest(HttpServletRequest req, HttpMethod method) {
+    private HttpRequest getHttpRequest(HttpServletRequest req, HttpMethod method) throws ServletException{
         System.out.println("req.getRequestURI() = " + req.getRequestURI());
         System.out.println("req.getContextPath() + req.getServletPath() = " + req.getContextPath() + req.getServletPath());
         String requestUrl = req.getRequestURI().substring((req.getContextPath() + req.getServletPath()).length() + 1);
         System.out.println("requestUrl = " + requestUrl);
-        String proxyKey = requestUrl.substring(0, requestUrl.indexOf("/"));
+        String proxyKey = requestUrl;
+        String requestPath = "";
+        if(requestUrl.contains("/")){
+            proxyKey = requestUrl.substring(0, requestUrl.indexOf("/"));
+            requestPath = requestUrl.substring(requestUrl.indexOf("/") + 1);
+        }
         System.out.println("proxyKey = " + proxyKey);
         String proxyUrl = proxies.get(proxyKey);
         System.out.println("proxyUrl = " + proxyUrl);
-        proxyUrl = proxyUrl + requestUrl.substring(requestUrl.indexOf("/") + 1);
+        if(proxyUrl == null){
+            throw new ServletException("No proxy found for " + proxyKey);
+        }
+        proxyUrl = proxyUrl + requestPath;
         System.out.println("proxyUrl = " + proxyUrl);
         HttpRequest request = new HttpRequest(proxyUrl);
         request.setMethod(method);

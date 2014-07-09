@@ -16,10 +16,9 @@
             </list>
         </property>
     </bean-->
-	
-    <util:map id="proxyMappings">
-        <entry key="test" value="http://httpbin.org/"/>
-        <entry key="rhinoforms" value="http://localhost:8080/"/>
-    </util:map>
+    
+    <bean id="proxyMappings" class="uk.co.revsys.proxy.ProxyMapFactoryBean">
+        <property name="location" value="classpath:proxy.properties"/>
+    </bean>
 
 </beans>
