@@ -58,7 +58,14 @@ public class ProxyServlet extends HttpServlet {
         processHttpResponse(response, resp);
     }
 
-    private HttpRequest getHttpRequest(HttpServletRequest req, HttpMethod method) throws ServletException{
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        HttpRequest request = getHttpRequest(req, HttpMethod.DELETE);
+        HttpResponse response = httpClient.invoke(request);
+        processHttpResponse(response, resp);
+    }
+
+    private HttpRequest getHttpRequest(HttpServletRequest req, HttpMethod method) throws ServletException, IOException{
         System.out.println("req.getRequestURI() = " + req.getRequestURI());
         System.out.println("req.getContextPath() + req.getServletPath() = " + req.getContextPath() + req.getServletPath());
         String requestUrl = req.getRequestURI().substring((req.getContextPath() + req.getServletPath()).length() + 1);
@@ -93,6 +100,7 @@ public class ProxyServlet extends HttpServlet {
             String parameterValue = req.getParameter(parameterName);
             request.getParameters().put(parameterName, parameterValue);
         }
+        request.setBody(req.getInputStream());
         return request;
     }
 
