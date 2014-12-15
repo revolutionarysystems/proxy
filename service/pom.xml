@@ -1,54 +1,81 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<artifactId>proxy-service</artifactId>
-	<packaging>war</packaging>
-	<name>Proxy Service</name>
-	<description>Proxy Service</description>
-    
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>proxy-service</artifactId>
+    <packaging>war</packaging>
+    <name>Proxy Service</name>
+    <description>Proxy Service</description>
+
     <parent>
         <groupId>uk.co.revsys.proxy</groupId>
         <artifactId>proxy-parent</artifactId>
         <version>0.2.0-SNAPSHOT</version>
     </parent>
-   
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring-version>3.1.2.RELEASE</spring-version>
-	</properties>
 
-	<dependencies>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <spring-version>3.1.2.RELEASE</spring-version>
+    </properties>
+
+    <dependencies>
         <dependency>
-			<groupId>uk.co.revsys.proxy</groupId>
-			<artifactId>proxy-core</artifactId>
-			<version>0.2.0-SNAPSHOT</version>
-		</dependency>
-        
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-beans</artifactId>
-			<version>${spring-version}</version>
+            <groupId>uk.co.revsys.proxy</groupId>
+            <artifactId>proxy-core</artifactId>
+            <version>0.2.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <version>${spring-version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring-version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <version>${spring-version}</version>
+        </dependency>
+
+        <dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.5</version>
+			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-context</artifactId>
-			<version>${spring-version}</version>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-core</artifactId>
-			<version>${spring-version}</version>
+			<groupId>log4j</groupId>
+			<artifactId>apache-log4j-extras</artifactId>
+			<version>1.1</version>
+			<scope>runtime</scope>
 		</dependency>
         
+        <dependency>
+            <groupId>uk.co.revsys.aws</groupId>
+            <artifactId>kinesis-log4j-appender</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.10</version>
             <scope>test</scope>
         </dependency>
-	</dependencies>
+    </dependencies>
 
 
 

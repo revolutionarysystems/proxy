@@ -11,6 +11,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import uk.co.revsys.utils.http.HttpClient;
@@ -20,6 +22,8 @@ import uk.co.revsys.utils.http.HttpRequest;
 import uk.co.revsys.utils.http.HttpResponse;
 
 public class ProxyServlet extends HttpServlet {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProxyServlet.class);
 
     private ProxyMap proxies;
     private HttpClient httpClient;
@@ -31,14 +35,15 @@ public class ProxyServlet extends HttpServlet {
         proxies = new ProxyMap();
         Map<String, ProxyMap> proxyMaps = webApplicationContext.getBeansOfType(ProxyMap.class);
         Map<String, ProxyMapFactoryBean> proxyMapFactories = webApplicationContext.getBeansOfType(ProxyMapFactoryBean.class);
-        for(Entry<String, ProxyMapFactoryBean> entry: proxyMapFactories.entrySet()){
+        for (Entry<String, ProxyMapFactoryBean> entry : proxyMapFactories.entrySet()) {
             try {
                 proxyMaps.put(entry.getKey(), entry.getValue().getObject());
             } catch (Exception ex) {
+                LOGGER.error("Could not load proxy maps", ex);
                 throw new ServletException("Could not load proxy maps", ex);
             }
         }
-        for(ProxyMap proxyMap: proxyMaps.values()){
+        for (ProxyMap proxyMap : proxyMaps.values()) {
             proxies.putAll(proxyMap);
         }
         httpClient = new HttpClientImpl();
@@ -46,44 +51,58 @@ public class ProxyServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        HttpRequest request = getHttpRequest(req, HttpMethod.GET);
-        HttpResponse response = httpClient.invoke(request);
-        processHttpResponse(response, resp);
+        doRequest(req, resp, HttpMethod.GET);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        HttpRequest request = getHttpRequest(req, HttpMethod.POST);
-        HttpResponse response = httpClient.invoke(request);
-        processHttpResponse(response, resp);
+        doRequest(req, resp, HttpMethod.POST);
     }
 
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        HttpRequest request = getHttpRequest(req, HttpMethod.DELETE);
+        doRequest(req, resp, HttpMethod.DELETE);
+    }
+    
+    private void doRequest(HttpServletRequest req, HttpServletResponse resp, HttpMethod method) throws ServletException, IOException{
+        String ipAddress = getIPAddress(req);
+        HttpRequest request = getHttpRequest(req, method);
+        logRequest(ipAddress, request);
         HttpResponse response = httpClient.invoke(request);
+        logResponse(ipAddress, request, response);
         processHttpResponse(response, resp);
     }
+    
+    private String getIPAddress(HttpServletRequest req){
+        String ipAddress = req.getHeader("X-FORWARDED-FOR");
+        if (ipAddress == null) {
+            ipAddress = req.getRemoteAddr();
+        }
+        return ipAddress;
+    }
+    
+    private void logRequest(String ipAddress, HttpRequest req){
+        LOGGER.debug("REQUEST: " + ipAddress + " " + req.getMethod().name() + " " + req.getUrl());
+    }
+    
+    private void logResponse(String ipAddress, HttpRequest req, HttpResponse resp){
+        LOGGER.info("RESPONSE: " + ipAddress + " " + req.getMethod().name() + " " + req.getUrl() + " " + resp.getStatusCode());
+    }
 
-    private HttpRequest getHttpRequest(HttpServletRequest req, HttpMethod method) throws ServletException, IOException{
-        System.out.println("req.getRequestURI() = " + req.getRequestURI());
-        System.out.println("req.getContextPath() + req.getServletPath() = " + req.getContextPath() + req.getServletPath());
+    private HttpRequest getHttpRequest(HttpServletRequest req, HttpMethod method) throws ServletException, IOException {
         String requestUrl = req.getRequestURI().substring((req.getContextPath() + req.getServletPath()).length() + 1);
-        System.out.println("requestUrl = " + requestUrl);
         String proxyKey = requestUrl;
         String requestPath = "";
-        if(requestUrl.contains("/")){
+        if (requestUrl.contains("/")) {
             proxyKey = requestUrl.substring(0, requestUrl.indexOf("/"));
             requestPath = requestUrl.substring(requestUrl.indexOf("/") + 1);
         }
-        System.out.println("proxyKey = " + proxyKey);
         String proxyUrl = proxies.get(proxyKey);
-        System.out.println("proxyUrl = " + proxyUrl);
-        if(proxyUrl == null){
+        if (proxyUrl == null) {
+            LOGGER.warn("No proxy found for " + proxyKey);
             throw new ServletException("No proxy found for " + proxyKey);
         }
         proxyUrl = proxyUrl + requestPath;
-        System.out.println("proxyUrl = " + proxyUrl);
         HttpRequest request = new HttpRequest(proxyUrl);
         request.setMethod(method);
         Enumeration<String> headerNames = req.getHeaderNames();
