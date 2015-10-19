@@ -25,6 +25,8 @@ public class ProxyServlet extends HttpServlet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProxyServlet.class);
 
+    private static final HttpServletRequestParser requestParser = new HttpServletRequestParser();
+    
     private ProxyMap proxies;
     private HttpClient httpClient;
 
@@ -90,7 +92,8 @@ public class ProxyServlet extends HttpServlet {
     }
 
     private HttpRequest getHttpRequest(HttpServletRequest req, HttpMethod method) throws ServletException, IOException {
-        String requestUrl = req.getRequestURI().substring((req.getContextPath() + req.getServletPath()).length() + 1);
+        HttpRequest request = requestParser.parse(req);
+        String requestUrl = request.getUrl();
         String proxyKey = requestUrl;
         String requestPath = "";
         if (requestUrl.contains("/")) {
@@ -103,23 +106,7 @@ public class ProxyServlet extends HttpServlet {
             throw new ServletException("No proxy found for " + proxyKey);
         }
         proxyUrl = proxyUrl + requestPath;
-        HttpRequest request = new HttpRequest(proxyUrl);
-        request.setMethod(method);
-        Enumeration<String> headerNames = req.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String headerName = headerNames.nextElement();
-            Enumeration<String> headerValues = req.getHeaders(headerName);
-            while (headerValues.hasMoreElements()) {
-                request.getHeaders().put(headerName, headerValues.nextElement());
-            }
-        }
-        Enumeration<String> parameterNames = req.getParameterNames();
-        while (parameterNames.hasMoreElements()) {
-            String parameterName = parameterNames.nextElement();
-            String parameterValue = req.getParameter(parameterName);
-            request.getParameters().put(parameterName, parameterValue);
-        }
-        request.setBody(req.getInputStream());
+        request.setUrl(proxyUrl);
         return request;
     }
 
